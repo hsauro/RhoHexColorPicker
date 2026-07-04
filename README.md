@@ -29,7 +29,7 @@ a FireMonkey port of the classic VCL `TRhoHexaColorPicker` from mbColorLib.
 
 ## Screenshot
 
-<img src="Images/ScreenShot.png" alt="Alt Text" width="500">
+<img src="Images/ScreenShot.png" alt="Screen-shot" width="400">
 
 ## Installation (design-time component)
 
