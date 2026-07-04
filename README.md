@@ -2,7 +2,7 @@
 
 A honeycomb / hexagonal **color picker control for FireMonkey (FMX)**, with an
 intensity slider, an opacity (alpha) bar, and a right-click "copy hex" menu. It is
-a FireMonkey port of the classic VCL `THexaColorPicker` from mbColorLib.
+a FireMonkey port of the classic VCL `TRhoHexaColorPicker` from mbColorLib.
 
 > Built and tested with **Delphi 13 (RAD Studio 37.0)**, Win32 and Win64.
 
@@ -129,8 +129,8 @@ without installing the package.
 
 ```
 Source/
-  HexColorPickerFmx.pas        the control (THexColorPicker)
-  HexColorPickerFmxReg.pas     design-time Register (palette: "mbColor Lib")
+  RhoHexColorPickerFmx.pas        the control (THexColorPicker)
+  RhoHexColorPickerFmxReg.pas     design-time Register (palette: "mbColor Lib")
 Package/
   HexColorPickerFmxRT.dpk      runtime package
   HexColorPickerFmxDT.dpk      design-time package (install this)
