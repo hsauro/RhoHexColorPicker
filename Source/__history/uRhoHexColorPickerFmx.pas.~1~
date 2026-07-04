@@ -1,0 +1,1525 @@
+unit HexColorPickerFmx;
+
+// FireMonkey (FMX) port of the original VCL THexColorPicker (mbColorLib).
+// Tested against Delphi 13. The control is fully custom-drawn and self-contained:
+// it depends only on the RTL and FMX, not on the legacy color-space/scanline units.
+
+interface
+
+uses
+  System.SysUtils, System.Classes, System.Types, System.UITypes,
+  System.UIConsts, System.Math, System.Math.Vectors,
+  FMX.Types, FMX.Controls, FMX.Graphics, FMX.Menus, FMX.Forms, FMX.Platform;
+
+const
+ CustomCell = -2;
+ NoCell = -1;
+
+type
+ TMarker = (smArrow, smRect);
+
+ TCombEntry = record
+  Position: TPoint;
+  Color: TAlphaColor;
+  TabIndex: integer;
+ end;
+
+ TCombArray = array of TCombEntry;
+
+ TFloatPoint = record
+  X, Y: Extended;
+ end;
+
+ TRGBrec = record
+  Red, Green, Blue: Single;
+ end;
+
+ TSelectionMode = (smNone, smColor, smBW, smRamp, smAlpha);
+
+ [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+ THexColorPicker = class(TControl)
+ private
+  FInitialized: boolean;
+  FIncrement: integer;
+  FSelectedCombIndex: integer;
+  mX, mY: integer;
+  FHintFormat: string;
+  FUnderCursor: TAlphaColor;
+  FBackgroundColor: TAlphaColor;
+  FOnChange, FOnIntensityChange, FOnAlphaChange: TNotifyEvent;
+  FCurrentColor: TAlphaColor;
+  FAlpha: Byte;
+  FOpacityVisible: boolean;
+  FOpacityRect: TRect;
+  FPopup: TPopupMenu;
+  FCopyItems: array[0..2] of TMenuItem;
+  FSelectedIndex: Integer;
+  FColorCombRect, FBWCombRect, FSliderRect, FCustomColorRect: TRect;
+  FCombSize, FLevels: Integer;
+  FBWCombs, FColorCombs: TCombArray;
+  FCombCorners: array[0..5] of TFloatPoint;
+  FCenterColor: TRGBrec;
+  FCenterIntensity: Single;
+  FSliderWidth: integer;
+  FCustomIndex,             // If FSelectedIndex contains CustomCell then this index shows
+                            // which index in the custom area has been selected.
+                            // Positive values indicate the color comb and negative values
+                            // indicate the B&W combs (complement). This value is offset with
+                            // 1 to use index 0 to show no selection.
+  FRadius: Integer;
+  FSelectionMode: TSelectionMode;
+  FSliderVisible: boolean;
+  FMarker: TMarker;
+  FNewArrowStyle: boolean;
+  FIntensityText: string;
+
+  procedure SetNewArrowStyle(Value: boolean);
+  procedure SetMarker(Value: TMarker);
+  procedure SetSliderVisible(Value: boolean);
+  procedure SetRadius(r: integer);
+  procedure SetSliderWidth(w: integer);
+  procedure SetBackgroundColor(const Value: TAlphaColor);
+  procedure SetIntensity(v: integer);
+  procedure SetSelectedAlpha(Value: Byte);
+  procedure SetOpacityVisible(Value: boolean);
+  procedure ChangeIntensity(increase: boolean);
+  procedure SelectColor(Color: TAlphaColor);
+  procedure CommitColor(const RGBColor: TAlphaColor);
+  procedure Initialise;
+  procedure SetSelectedColor(const Value: TAlphaColor);
+  procedure RenderCombs;
+  procedure RenderOpacityBar;
+  procedure DrawChecker(const R: TRectF);
+  procedure BuildCombPolygon(X, Y, Size: Integer; var Poly: TPolygon);
+  procedure FillComb(X, Y, Size: Integer; AColor: TAlphaColor);
+  procedure OutlineComb(X, Y, Size: Integer; Thickness: Single);
+  procedure HandleCustomColors(X, Y: Integer; Shift: TShiftState);
+  procedure CalculateCombLayout;
+  procedure DrawAll;
+  procedure EndSelection;
+  procedure EnumerateCombs;
+  procedure UpdateHint(X, Y: Integer);
+  procedure BuildPopupMenu;
+  procedure EnsurePopupParented;
+  procedure CopyMenuClick(Sender: TObject);
+  function SelectAvailableColor(Color: TAlphaColor): boolean;
+  function GetIntensity: integer;
+  function HandleBWArea(X, Y: Integer; Shift: TShiftState): Boolean;
+  function HandleColorComb(X, Y: Integer; Shift: TShiftState): Boolean;
+  function HandleSlider(X, Y: Integer; Shift: TShiftState): Boolean;
+  function HandleOpacity(X, Y: Integer; Shift: TShiftState): Boolean;
+  function PtInComb(Comb: TCombEntry; P: TPoint; Scale: Integer): Boolean;
+  function FindBWArea(X, Y: Integer): Integer;
+  function FindColorArea(X, Y: Integer): Integer;
+  function GetNextCombIndex(i: integer): integer;
+  function GetPreviousCombIndex(i: integer): integer;
+  function GetColorUnderCursor: TAlphaColor;
+ protected
+  procedure Paint; override;
+  procedure Resize; override;
+  procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
+  procedure MouseMove(Shift: TShiftState; X, Y: Single); override;
+  procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
+  procedure DoMouseLeave; override;
+  procedure MouseWheel(Shift: TShiftState; WheelDelta: Integer; var Handled: Boolean); override;
+  procedure KeyDown(var Key: Word; var KeyChar: WideChar; Shift: TShiftState); override;
+ public
+  constructor Create(AOwner: TComponent); override;
+  destructor Destroy; override;
+
+  procedure SelectCombIndex(i: integer);
+  function GetSelectedCombIndex: integer;
+  function GetHexColorUnderCursor: string;
+  function GetColorAtPoint(X, Y: integer): TAlphaColor;
+  function GetHexColorAtPoint(X, Y: integer): string;
+  // hex string representations of the currently selected color
+  function HexRGB: string;    // #RRGGBB
+  function HexRGBA: string;   // #RRGGBBAA  (web order)
+  function HexARGB: string;   // $AARRGGBB  (Delphi TAlphaColor order)
+  procedure CopyToClipboard(const AText: string);
+  procedure CopyHexToClipboard;  // copies HexRGB
+  property ColorUnderCursor: TAlphaColor read GetColorUnderCursor;
+ published
+  property Align;
+  property Anchors;
+  property ClipChildren;
+  property Cursor;
+  property DragMode;
+  property Enabled;
+  property Height;
+  property HitTest;
+  property Locked;
+  property Margins;
+  property Opacity;
+  property Padding;
+  property PopupMenu;
+  property Position;
+  property RotationAngle;
+  property RotationCenter;
+  property Scale;
+  property Size;
+  property TabOrder;
+  property TabStop;
+  property Visible;
+  property Width;
+  property Hint;
+  property ShowHint;
+
+  property HintFormat: string read FHintFormat write FHintFormat;
+  property SelectedColor: TAlphaColor read FCurrentColor write SetSelectedColor;
+  property SelectedAlpha: Byte read FAlpha write SetSelectedAlpha default 255;
+  property OpacityVisible: boolean read FOpacityVisible write SetOpacityVisible default true;
+  property BackgroundColor: TAlphaColor read FBackgroundColor write SetBackgroundColor;
+  property Intensity: integer read GetIntensity write SetIntensity default 100;
+  property IntensityIncrement: integer read FIncrement write FIncrement default 1;
+  property SliderVisible: boolean read FSliderVisible write SetSliderVisible default true;
+  property SliderMarker: TMarker read FMarker write SetMarker default smArrow;
+  property NewArrowStyle: boolean read FNewArrowStyle write SetNewArrowStyle default false;
+  property IntensityText: string read FIntensityText write FIntensityText;
+  property SliderWidth: integer read FSliderWidth write SetSliderWidth default 12;
+
+  property OnChange: TNotifyEvent read FOnChange write FOnChange;
+  property OnIntensityChange: TNotifyEvent read FOnIntensityChange write FOnIntensityChange;
+  property OnAlphaChange: TNotifyEvent read FOnAlphaChange write FOnAlphaChange;
+  property OnClick;
+  property OnDblClick;
+  property OnMouseDown;
+  property OnMouseMove;
+  property OnMouseUp;
+  property OnMouseWheel;
+  property OnMouseEnter;
+  property OnMouseLeave;
+  property OnKeyDown;
+  property OnKeyUp;
+  property OnResize;
+ end;
+
+ const
+  DefCenterColor: TRGBrec =(Red: 1; Green: 1; Blue: 1);  // White
+  DefColors: array[0..5] of TRGBrec = (
+     (Red: 1; Green: 0; Blue: 1),     // Magenta
+     (Red: 1; Green: 0; Blue: 0),     // Red
+     (Red: 1; Green: 1; Blue: 0),     // Yellow
+     (Red: 0; Green: 1; Blue: 0),     // Green
+     (Red: 0; Green: 1; Blue: 1),     // Cyan
+     (Red: 0; Green: 0; Blue: 1)       // Blue
+     );
+  DefCenter: TFloatPoint = (X: 0; Y: 0);
+
+implementation
+
+//-- local color helpers -------------------------------------------------------
+
+// Returns the hex string (RRGGBB) for an FMX TAlphaColor.
+function ColorToHex(Color: TAlphaColor): string;
+var
+ rec: TAlphaColorRec;
+begin
+ rec.Color := Color;
+ Result := IntToHex(rec.R, 2) + IntToHex(rec.G, 2) + IntToHex(rec.B, 2);
+end;
+
+// Replaces %r, %g, %b and %hex placeholders in the hint format with the color's
+// channel values. (Originally provided by the VCL PalUtils unit.)
+function FormatHint(const Fmt: string; Color: TAlphaColor): string;
+var
+ rec: TAlphaColorRec;
+begin
+ rec.Color := Color;
+ Result := StringReplace(Fmt, '%hex', ColorToHex(Color), [rfReplaceAll, rfIgnoreCase]);
+ Result := StringReplace(Result, '%r', IntToStr(rec.R), [rfReplaceAll, rfIgnoreCase]);
+ Result := StringReplace(Result, '%g', IntToStr(rec.G), [rfReplaceAll, rfIgnoreCase]);
+ Result := StringReplace(Result, '%b', IntToStr(rec.B), [rfReplaceAll, rfIgnoreCase]);
+end;
+
+function RGBFromFloat(Color: TRGBrec): TAlphaColor;
+begin
+ Result := MakeColor(Round(255 * Color.Red), Round(255 * Color.Green), Round(255 * Color.Blue));
+end;
+
+// True if two colors share the same RGB, ignoring the alpha channel. The combs
+// are always stored opaque, so selection matching must compare RGB only.
+function SameRGB(A, B: TAlphaColor): Boolean; inline;
+begin
+ Result := (A and $00FFFFFF) = (B and $00FFFFFF);
+end;
+
+// Combines an RGB color with an explicit alpha byte.
+function WithAlpha(Color: TAlphaColor; A: Byte): TAlphaColor; inline;
+var
+ rec: TAlphaColorRec;
+begin
+ rec.Color := Color;
+ rec.A := A;
+ Result := rec.Color;
+end;
+
+const
+ OpacityBarHeight = 12;   // height of the alpha bar
+ OpacityStrip = 22;       // vertical space reserved below the combs (bar + padding)
+ CheckerCell = 5;         // checkerboard square size for the transparency preview
+
+//------------------------------------------------------------------------------
+
+constructor THexColorPicker.Create(AOwner: TComponent);
+begin
+ inherited;
+ CanFocus := true;
+ AutoCapture := true;
+ HitTest := true;
+ FRadius := 90;
+ FSliderWidth := 12;
+ FAlpha := 255;
+ FOpacityVisible := true;
+ FBackgroundColor := claNull;
+ FSelectedCombIndex := 0;
+ FHintFormat := 'RGB(%r, %g, %b)'#13'Hex: #%hex';
+ FSliderVisible := true;
+ FMarker := smArrow;
+ FNewArrowStyle := false;
+ FIntensityText := 'Intensity';
+ ShowHint := true;
+ BuildPopupMenu;
+ Initialise;
+ Width := 204;
+ Height := 226;
+ DrawAll;
+ FInitialized := true;
+ SetSelectedColor(claBlack);
+end;
+
+procedure THexColorPicker.BuildPopupMenu;
+var
+ I: Integer;
+begin
+ FPopup := TPopupMenu.Create(Self);
+ for I := 0 to 2 do
+  begin
+   FCopyItems[I] := TMenuItem.Create(FPopup);
+   FCopyItems[I].Tag := I;
+   FCopyItems[I].OnClick := CopyMenuClick;
+   FPopup.AddObject(FCopyItems[I]);
+  end;
+end;
+
+// A runtime TPopupMenu must be parented into the form/scene before Popup will
+// display it. We can only do that once the control itself has a parent, so it's
+// done lazily on first use.
+procedure THexColorPicker.EnsurePopupParented;
+begin
+ if (FPopup.Parent = nil) then
+  begin
+   if (Root <> nil) and (Root.GetObject is TFmxObject) then
+    FPopup.Parent := Root.GetObject as TFmxObject
+   else if Parent <> nil then
+    FPopup.Parent := Parent;
+  end;
+end;
+
+destructor THexColorPicker.Destroy;
+begin
+ FBWCombs := nil;
+ FColorCombs := nil;
+ inherited;
+end;
+
+procedure THexColorPicker.Initialise;
+var
+ I: Integer;
+begin
+ FSelectedIndex := NoCell;
+ for I := 0 to 5 do
+  begin
+   FCombCorners[I].X := 0.5 * cos(Pi * (90 - I * 60) / 180);
+   FCombCorners[I].Y := 0.5 * sin(Pi * (90 - I * 60) / 180);
+  end;
+ FLevels := 7;
+ FCombSize := Round(FRadius / (FLevels - 1));
+ FCenterColor := DefCenterColor;
+ FIncrement := 1;
+ FCenterIntensity := 1;
+end;
+
+//-- drawing -------------------------------------------------------------------
+
+procedure THexColorPicker.BuildCombPolygon(X, Y, Size: Integer; var Poly: TPolygon);
+var
+ I: Integer;
+begin
+ SetLength(Poly, 6);
+ for I := 0 to 5 do
+  Poly[I] := PointF(FCombCorners[I].X * Size + X, FCombCorners[I].Y * Size + Y);
+end;
+
+procedure THexColorPicker.FillComb(X, Y, Size: Integer; AColor: TAlphaColor);
+var
+ Poly: TPolygon;
+begin
+ BuildCombPolygon(X, Y, Size, Poly);
+ Canvas.Fill.Kind := TBrushKind.Solid;
+ Canvas.Fill.Color := AColor;
+ Canvas.FillPolygon(Poly, AbsoluteOpacity);
+ // stroke with the same color so there are no gaps between adjacent combs
+ Canvas.Stroke.Kind := TBrushKind.Solid;
+ Canvas.Stroke.Color := AColor;
+ Canvas.Stroke.Thickness := 1;
+ Canvas.DrawPolygon(Poly, AbsoluteOpacity);
+end;
+
+// Draws a two-tone selection outline (FMX has no XOR/raster pen modes): a dark
+// halo with a lighter core, so the marker stays visible on any comb color and
+// looks the same everywhere. Thickness controls the outer (halo) width.
+procedure THexColorPicker.OutlineComb(X, Y, Size: Integer; Thickness: Single);
+var
+ Poly: TPolygon;
+begin
+ BuildCombPolygon(X, Y, Size, Poly);
+ Canvas.Stroke.Kind := TBrushKind.Solid;
+ // outer dark halo
+ Canvas.Stroke.Color := claBlack;
+ Canvas.Stroke.Thickness := Thickness;
+ Canvas.DrawPolygon(Poly, AbsoluteOpacity);
+ // lighter core
+ Canvas.Stroke.Color := claWhite;
+ Canvas.Stroke.Thickness := Thickness / 2;
+ Canvas.DrawPolygon(Poly, AbsoluteOpacity);
+ Canvas.Stroke.Thickness := 1;
+end;
+
+procedure THexColorPicker.RenderCombs;
+var
+ I, Index, XOffs, YOffs, Count: Integer;
+ Poly: TPolygon;
+begin
+ // draw color combs
+ XOffs := FRadius + FColorCombRect.Left;
+ YOffs := FRadius + FColorCombRect.Top;
+ for I := 0 to High(FColorCombs) do
+  FillComb(FColorCombs[I].Position.X + XOffs, FColorCombs[I].Position.Y + YOffs, FCombSize, FColorCombs[I].Color);
+ // mark selected color comb
+ if FCustomIndex > 0 then
+  begin
+   Index := FCustomIndex - 1;
+   FSelectedCombIndex := Index;
+   OutlineComb(FColorCombs[Index].Position.X + XOffs, FColorCombs[Index].Position.Y + YOffs, FCombSize, 1.5);
+  end;
+ // draw white-to-black combs
+ XOffs := FColorCombRect.Left;
+ YOffs := FColorCombRect.Bottom - 4;
+ for I := 0 to High(FBWCombs) do
+  if (I = 0) or (I = High(FBWCombs)) then
+   FillComb(FBWCombs[I].Position.X + XOffs, FBWCombs[I].Position.Y + YOffs, 2 * FCombSize, FBWCombs[I].Color)
+  else
+   FillComb(FBWCombs[I].Position.X + XOffs, FBWCombs[I].Position.Y + YOffs, FCombSize, FBWCombs[I].Color);
+ // mark selected b&w comb
+ if FCustomIndex < 0 then
+  begin
+   Index := -(FCustomIndex + 1);
+   if Index < 0 then
+    FSelectedCombIndex := Index
+   else
+    FSelectedCombIndex := -Index;
+   if (Index = 0) or (Index = High(FBWCombs)) then
+    begin
+     if ((FColorCombs[0].Color = claWhite) and (Index = 0)) or ((FColorCombs[0].Color = claBlack) and (Index = High(FBWCombs))) then
+      OutlineComb(FRadius + FColorCombRect.Left, FRadius + FColorCombRect.Top, FCombSize, 1.5); // mark white or black center
+     OutlineComb(FBWCombs[Index].Position.X + XOffs, FBWCombs[Index].Position.Y + YOffs, 2 * FCombSize, 1.5);
+    end
+   else
+    OutlineComb(FBWCombs[Index].Position.X + XOffs, FBWCombs[Index].Position.Y + YOffs, FCombSize, 1.5);
+  end;
+ // intensity slider
+ if FSliderVisible then
+  begin
+   XOffs := FSliderRect.Left;
+   YOffs := FSliderRect.Top;
+   Count := FSliderRect.Bottom - FSliderRect.Top - 1;
+   if Count < 1 then Count := 1;
+   // smooth white-to-black ramp via a gradient brush (avoids per-row banding)
+   Canvas.Fill.Kind := TBrushKind.Gradient;
+   Canvas.Fill.Gradient.Style := TGradientStyle.Linear;
+   Canvas.Fill.Gradient.StartPosition.Point := PointF(0, 0);
+   Canvas.Fill.Gradient.StopPosition.Point := PointF(0, 1);
+   Canvas.Fill.Gradient.Color := claWhite;
+   Canvas.Fill.Gradient.Color1 := claBlack;
+   Canvas.FillRect(RectF(XOffs, YOffs, XOffs + FSliderWidth, YOffs + Count), 0, 0, [], AbsoluteOpacity);
+   // draw marker
+   Inc(XOffs, FSliderWidth + 1);
+   Inc(YOffs, Round(Count * (1 - FCenterIntensity)));
+   case FMarker of
+    smArrow:
+     begin
+      if not FNewArrowStyle then
+       begin
+        SetLength(Poly, 3);
+        Poly[0] := PointF(XOffs, YOffs);
+        Poly[1] := PointF(XOffs + 6, YOffs - 4);
+        Poly[2] := PointF(XOffs + 6, YOffs + 4);
+        Canvas.Fill.Kind := TBrushKind.Solid;
+        Canvas.Fill.Color := claBlack;
+        Canvas.FillPolygon(Poly, AbsoluteOpacity);
+       end
+      else
+       begin
+        SetLength(Poly, 7);
+        Poly[0] := PointF(XOffs, YOffs);
+        Poly[1] := PointF(XOffs + 4, YOffs - 4);
+        Poly[2] := PointF(XOffs + 6, YOffs - 4);
+        Poly[3] := PointF(XOffs + 7, YOffs - 3);
+        Poly[4] := PointF(XOffs + 7, YOffs + 3);
+        Poly[5] := PointF(XOffs + 6, YOffs + 4);
+        Poly[6] := PointF(XOffs + 4, YOffs + 4);
+        Canvas.Fill.Kind := TBrushKind.Solid;
+        Canvas.Fill.Color := claWhite;
+        Canvas.FillPolygon(Poly, AbsoluteOpacity);
+        Canvas.Stroke.Kind := TBrushKind.Solid;
+        Canvas.Stroke.Color := claGray;
+        Canvas.Stroke.Thickness := 1;
+        Canvas.DrawPolygon(Poly, AbsoluteOpacity);
+       end;
+     end;
+    smRect:
+     begin
+      Canvas.Stroke.Kind := TBrushKind.Solid;
+      Canvas.Stroke.Color := claBlack;
+      Canvas.Stroke.Thickness := 1;
+      Canvas.DrawRect(RectF(XOffs - FSliderWidth - 4, YOffs - 3, XOffs + 2, YOffs + 3), 0, 0, [], AbsoluteOpacity);
+     end;
+   end;
+  end;
+ if FOpacityVisible then
+  RenderOpacityBar;
+end;
+
+// Draws an alternating gray/white checkerboard inside R so the transparent part
+// of the opacity gradient is visible.
+procedure THexColorPicker.DrawChecker(const R: TRectF);
+var
+ ix, iy: Integer;
+ cx, cy: Single;
+begin
+ Canvas.Fill.Kind := TBrushKind.Solid;
+ Canvas.Fill.Color := claWhite;
+ Canvas.FillRect(R, 0, 0, [], AbsoluteOpacity);
+ Canvas.Fill.Color := TAlphaColor($FFCCCCCC);
+ iy := 0;
+ cy := R.Top;
+ while cy < R.Bottom do
+  begin
+   ix := 0;
+   cx := R.Left;
+   while cx < R.Right do
+    begin
+     if Odd(ix + iy) then
+      Canvas.FillRect(RectF(cx, cy, Min(cx + CheckerCell, R.Right), Min(cy + CheckerCell, R.Bottom)),
+                      0, 0, [], AbsoluteOpacity);
+     cx := cx + CheckerCell;
+     Inc(ix);
+    end;
+   cy := cy + CheckerCell;
+   Inc(iy);
+  end;
+end;
+
+// Draws the horizontal opacity (alpha) bar below the combs: a checkerboard
+// overlaid with a left-transparent -> right-opaque gradient of the selected
+// color, plus a two-tone position marker at the current alpha.
+procedure THexColorPicker.RenderOpacityBar;
+var
+ rf: TRectF;
+ w, px: Integer;
+begin
+ w := FOpacityRect.Right - FOpacityRect.Left;
+ if w < 2 then
+  Exit;
+ rf := RectF(FOpacityRect.Left, FOpacityRect.Top, FOpacityRect.Right, FOpacityRect.Bottom);
+ DrawChecker(rf);
+ // smooth gradient overlay: selected RGB, alpha 0 (left) .. 255 (right)
+ Canvas.Fill.Kind := TBrushKind.Gradient;
+ Canvas.Fill.Gradient.Style := TGradientStyle.Linear;
+ Canvas.Fill.Gradient.StartPosition.Point := PointF(0, 0);
+ Canvas.Fill.Gradient.StopPosition.Point := PointF(1, 0);
+ Canvas.Fill.Gradient.Color := WithAlpha(FCurrentColor, 0);
+ Canvas.Fill.Gradient.Color1 := WithAlpha(FCurrentColor, 255);
+ Canvas.FillRect(rf, 0, 0, [], AbsoluteOpacity);
+ // border
+ Canvas.Stroke.Color := claGray;
+ Canvas.Stroke.Thickness := 1;
+ Canvas.DrawRect(rf, 0, 0, [], AbsoluteOpacity);
+ // two-tone marker at current alpha
+ px := FOpacityRect.Left + Round(FAlpha / 255 * w);
+ Canvas.Stroke.Color := claBlack;
+ Canvas.Stroke.Thickness := 3;
+ Canvas.DrawLine(PointF(px, FOpacityRect.Top - 2), PointF(px, FOpacityRect.Bottom + 2), AbsoluteOpacity);
+ Canvas.Stroke.Color := claWhite;
+ Canvas.Stroke.Thickness := 1;
+ Canvas.DrawLine(PointF(px, FOpacityRect.Top - 2), PointF(px, FOpacityRect.Bottom + 2), AbsoluteOpacity);
+ Canvas.Stroke.Thickness := 1;
+end;
+
+procedure THexColorPicker.Paint;
+begin
+ if FBackgroundColor <> claNull then
+  begin
+   Canvas.Fill.Kind := TBrushKind.Solid;
+   Canvas.Fill.Color := FBackgroundColor;
+   Canvas.FillRect(LocalRect, 0, 0, [], AbsoluteOpacity);
+  end;
+ if FColorCombs = nil then
+  CalculateCombLayout;
+ RenderCombs;
+end;
+
+//-- hit testing & input -------------------------------------------------------
+
+// determines whether the position is within the slider area and acts accordingly
+function THexColorPicker.HandleSlider(X, Y: Integer; Shift: TShiftState): Boolean;
+var
+ dY: Integer;
+begin
+ if not FSliderVisible then
+  Exit(False);
+ Result := (PtInRect(FSliderRect, Point(X, Y)) and (FSelectionMode = smNone)) or
+          ((X >= FSliderRect.Left) and (X <= FSliderRect.Right) and (FSelectionMode = smRamp));
+ if Result and (ssLeft in Shift) then
+  begin
+   FSelectionMode := smRamp;
+   dY := FSliderRect.Bottom - FSliderRect.Top;
+   if dY = 0 then dY := 1;
+   FCenterIntensity := 1 - (Y - FSliderRect.Top) / dY;
+   if FCenterIntensity < 0 then FCenterIntensity := 0;
+   if FCenterIntensity > 1 then FCenterIntensity := 1;
+   FCenterColor.Red := DefCenterColor.Red * FCenterIntensity;
+   FCenterColor.Green := DefCenterColor.Green * FCenterIntensity;
+   FCenterColor.Blue := DefCenterColor.Blue * FCenterIntensity;
+   FColorCombs := nil;
+   CalculateCombLayout;
+   EndSelection;
+   Repaint;
+   if Assigned(FOnIntensityChange) then
+    FOnIntensityChange(Self);
+  end;
+end;
+
+// determines whether the position is within the opacity bar and acts accordingly
+function THexColorPicker.HandleOpacity(X, Y: Integer; Shift: TShiftState): Boolean;
+var
+ w: Integer;
+begin
+ if not FOpacityVisible then
+  Exit(False);
+ Result := (PtInRect(FOpacityRect, Point(X, Y)) and (FSelectionMode = smNone)) or
+          ((X >= FOpacityRect.Left - 4) and (X <= FOpacityRect.Right + 4) and (FSelectionMode = smAlpha));
+ if Result and (ssLeft in Shift) then
+  begin
+   FSelectionMode := smAlpha;
+   w := FOpacityRect.Right - FOpacityRect.Left;
+   if w < 1 then w := 1;
+   FAlpha := EnsureRange(Round((X - FOpacityRect.Left) / w * 255), 0, 255);
+   CommitColor(FCurrentColor);
+   Repaint;
+   if Assigned(FOnAlphaChange) then
+    FOnAlphaChange(Self);
+  end;
+end;
+
+function THexColorPicker.PtInComb(Comb: TCombEntry; P: TPoint; Scale: Integer): Boolean;
+begin
+ Result := (Sqr(Comb.Position.X - P.X) + Sqr(Comb.Position.Y - P.Y)) <= (Scale * Scale);
+end;
+
+// Looks for a comb at position (X, Y) in the black&white area.
+function THexColorPicker.FindBWArea(X, Y: Integer): Integer;
+var
+ I, Scale: Integer;
+ Pt: TPoint;
+begin
+ Result := -1;
+ Pt := Point(X - FBWCombRect.Left, Y - FBWCombRect.Top);
+ for I := 0 to High(FBWCombs) do
+  begin
+   if (I = 0) or (I = High(FBWCombs)) then
+    Scale := FCombSize
+   else
+    Scale := FCombSize div 2;
+   if PtInComb(FBWCombs[I], Pt, Scale) then
+    begin
+     Result := I;
+     Break;
+    end;
+  end;
+end;
+
+// determines whether the position is within the B&W comb area and acts accordingly
+function THexColorPicker.HandleBWArea(X, Y: Integer; Shift: TShiftState): Boolean;
+var
+ Index: Integer;
+begin
+ Result := PtInRect(FBWCombRect, Point(X, Y)) and (FSelectionMode in [smNone, smBW]);
+ if Result and (ssLeft in Shift) then
+  begin
+   FSelectionMode := smBW;
+   Index := FindBWArea(X, Y);
+   if Index > -1 then
+    begin
+     if FCustomIndex <> -(Index + 1) then
+      begin
+       FCustomIndex := -(Index + 1);
+       EndSelection;
+       Repaint;
+      end;
+    end
+   else
+    Result := False;
+  end;
+end;
+
+// Looks for a comb at position (X, Y) in the custom color area.
+function THexColorPicker.FindColorArea(X, Y: Integer): Integer;
+var
+ I: Integer;
+ Pt: TPoint;
+begin
+ Result := -1;
+ Pt := Point(X - (FRadius + FColorCombRect.Left), Y - (FRadius + FColorCombRect.Top));
+ for I := 0 to High(FColorCombs) do
+  if PtInComb(FColorCombs[I], Pt, FCombSize div 2) then
+   begin
+    Result := I;
+    Break;
+   end;
+end;
+
+// determines whether the position is within the color comb area and acts accordingly
+function THexColorPicker.HandleColorComb(X, Y: Integer; Shift: TShiftState): Boolean;
+var
+ Index: Integer;
+begin
+ Result := PtInRect(FColorCombRect, Point(X, Y)) and (FSelectionMode in [smNone, smColor]);
+ if Result and (ssLeft in Shift) then
+  begin
+   FSelectionMode := smColor;
+   Index := FindColorArea(X, Y);
+   if Index > -1 then
+    begin
+     if FCustomIndex <> (Index + 1) then
+      begin
+       FCustomIndex := Index + 1;
+       EndSelection;
+       Repaint;
+      end;
+    end
+   else
+    Result := False;
+  end;
+end;
+
+procedure THexColorPicker.HandleCustomColors(X, Y: Integer; Shift: TShiftState);
+begin
+ if not HandleSlider(X, Y, Shift) then
+  if not HandleOpacity(X, Y, Shift) then
+   if not HandleBWArea(X, Y, Shift) then
+    HandleColorComb(X, Y, Shift);
+end;
+
+procedure THexColorPicker.UpdateHint(X, Y: Integer);
+var
+ s: string;
+begin
+ if not ShowHint then
+  Exit;
+ if FSliderVisible and PtInRect(FSliderRect, Point(X, Y)) then
+  s := FIntensityText + Format(': %d%%', [Round(100 * FCenterIntensity)])
+ else if FOpacityVisible and PtInRect(FOpacityRect, Point(X, Y)) then
+  s := Format('Opacity: %d%%', [Round(FAlpha / 255 * 100)])
+ else if FUnderCursor <> claNull then
+  s := FormatHint(FHintFormat, FUnderCursor)
+ else
+  s := '';
+ if s <> Hint then
+  Hint := s;
+end;
+
+procedure THexColorPicker.MouseMove(Shift: TShiftState; X, Y: Single);
+var
+ ix, iy, Index: Integer;
+ Colors: TCombArray;
+begin
+ inherited;
+ ix := Round(X);
+ iy := Round(Y);
+ mX := ix;
+ mY := iy;
+ Colors := nil;
+ FUnderCursor := claNull;
+ if PtInRect(FBWCombRect, Point(ix, iy)) then
+  begin
+   Index := FindBWArea(ix, iy);
+   Colors := FBWCombs;
+   if (Index > -1) and (Colors <> nil) then
+    FUnderCursor := Colors[Index].Color;
+  end
+ else
+  if PtInRect(FColorCombRect, Point(ix, iy)) then
+   begin
+    Index := FindColorArea(ix, iy);
+    Colors := FColorCombs;
+    if (Index > -1) and (Colors <> nil) then
+     FUnderCursor := Colors[Index].Color;
+   end;
+ UpdateHint(ix, iy);
+ if ssLeft in Shift then
+  HandleCustomColors(ix, iy, Shift);
+end;
+
+procedure THexColorPicker.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+var
+ I: Integer;
+begin
+ inherited;
+ SetFocus; // needed so the key events work
+ if Button = TMouseButton.mbRight then
+  begin
+   // refresh the live values, then show the built-in "Copy" menu
+   FCopyItems[0].Text := 'Copy  ' + HexRGB;
+   FCopyItems[1].Text := 'Copy  ' + HexRGBA;
+   FCopyItems[2].Text := 'Copy  ' + HexARGB;
+   for I := 0 to 2 do
+    FCopyItems[I].Enabled := FCurrentColor <> claNull;
+   EnsurePopupParented;
+   FPopup.Popup(Screen.MousePos.X, Screen.MousePos.Y);
+  end
+ else if Button = TMouseButton.mbLeft then
+  HandleCustomColors(Round(X), Round(Y), Shift + [ssLeft]);
+end;
+
+procedure THexColorPicker.MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+begin
+ inherited;
+ FSelectionMode := smNone;
+end;
+
+procedure THexColorPicker.DoMouseLeave;
+begin
+ inherited;
+ FUnderCursor := claNull;
+ Hint := '';
+end;
+
+procedure THexColorPicker.MouseWheel(Shift: TShiftState; WheelDelta: Integer; var Handled: Boolean);
+begin
+ inherited;
+ if FSliderVisible and not Handled then
+  begin
+   ChangeIntensity(WheelDelta > 0);
+   Handled := True;
+  end;
+end;
+
+procedure THexColorPicker.KeyDown(var Key: Word; var KeyChar: WideChar; Shift: TShiftState);
+begin
+ if ssCtrl in Shift then
+  case Key of
+   vkLeft: SetSelectedColor(claWhite);
+   vkRight: SetSelectedColor(claBlack);
+   vkUp: if FSliderVisible then SetIntensity(100);
+   vkDown: if FSliderVisible then SetIntensity(0);
+  else
+   begin
+    inherited;
+    Exit;
+   end;
+  end
+ else
+  case Key of
+   vkLeft: SelectCombIndex(GetPreviousCombIndex(GetSelectedCombIndex));
+   vkRight: SelectCombIndex(GetNextCombIndex(GetSelectedCombIndex));
+   vkUp: if FSliderVisible then ChangeIntensity(true);
+   vkDown: if FSliderVisible then ChangeIntensity(false);
+  else
+   begin
+    inherited;
+    Exit;
+   end;
+  end;
+ Key := 0; // consumed
+end;
+
+//-- layout --------------------------------------------------------------------
+
+procedure THexColorPicker.DrawAll;
+var
+ WinTop: integer;
+begin
+ WinTop := - FRadius div 8; // use 10 instead of 8 if the top has been cut
+ FCombSize := Round(1 + FRadius / (FLevels - 1));
+ FColorCombRect := Rect(0, WinTop, 2 * FRadius, 2 * FRadius + WinTop);
+ FBWCombRect := Rect(FColorCombRect.Left, FColorCombRect.Bottom - 4,
+                     Round(17 * FCombSize * cos(Pi / 6) / 2) + 6 * FCombSize,
+                     FColorCombRect.Bottom + 2 * FCombSize);
+ if FSliderVisible then
+  FSliderRect := Rect(FColorCombRect.Right, FCombSize, FColorCombRect.Right + 10 + FSliderWidth, FColorCombRect.Bottom - FCombSize)
+ else
+  FSliderRect := Rect(-1, -1, -1, -1);
+ // horizontal opacity bar pinned to the bottom of the control, spanning its width
+ if FOpacityVisible then
+  FOpacityRect := Rect(2, Round(Height) - 4 - OpacityBarHeight, Round(Width) - 2, Round(Height) - 4)
+ else
+  FOpacityRect := Rect(-1, -1, -1, -1);
+end;
+
+// fills arrays with centers and colors for the custom color and black & white combs;
+// these arrays are used to quickly draw the combs and do hit tests
+procedure THexColorPicker.CalculateCombLayout;
+
+  function GrayFromIntensity(Intensity: Byte): TAlphaColor;
+  begin
+    Result := MakeColor(Intensity, Intensity, Intensity);
+  end;
+
+var
+ I, J, Level, CurrentIndex, CombCount: Cardinal;
+ CurrentColor: TRGBrec;
+ CurrentPos: TFloatPoint;
+ Scale: Extended;
+ // triangle vars
+ Pos1, Pos2, dPos1, dPos2, dPos: TFloatPoint;
+ Color1, Color2, dColor1, dColor2, dColor: TRGBrec;
+begin
+ if FLevels < 1 then FLevels := 1;
+ // To draw perfectly aligned combs we split the final comb into six triangles (sextants)
+ // and calculate each separately. The center comb is stored as first entry in the array
+ // and will not be considered twice (as with the other shared combs too).
+ CurrentIndex := 0;
+ CurrentColor := FCenterColor;
+ // Count = 1 + 6 * (((n-1) * n) / 2)
+ CombCount := 1 + 6 * (((FLevels - 1) * FLevels) div 2);
+ SetLength(FColorCombs, CombCount);
+ // store center values
+ FColorCombs[CurrentIndex].Position := Point(0, 0);
+ FColorCombs[CurrentIndex].Color := RGBFromFloat(CurrentColor);
+ Inc(CurrentIndex);
+ if FLevels < 2 then Exit;
+ // now go for each sextant
+ for I := 0 to 5 do
+  begin
+   Scale := 2 * FRadius * cos(Pi / 6);
+   Pos1.X := FCombCorners[I].Y * Scale;
+   Pos1.Y := FCombCorners[I].X * Scale;
+   Color1 := DefColors[I];
+   if I = 5 then
+    begin
+     Pos2.X := FCombCorners[0].Y * Scale;
+     Pos2.Y := FCombCorners[0].X * Scale;
+     Color2 := DefColors[0];
+    end
+   else
+    begin
+     Pos2.X := FCombCorners[I + 1].Y * Scale;
+     Pos2.Y := FCombCorners[I + 1].X * Scale;
+     Color2 := DefColors[I + 1];
+    end;
+   dPos1.X := Pos1.X / (FLevels - 1);
+   dPos1.Y := Pos1.Y / (FLevels - 1);
+   dPos2.X := Pos2.X / (FLevels - 1);
+   dPos2.Y := Pos2.Y / (FLevels - 1);
+   dColor1.Red := (Color1.Red - FCenterColor.Red) / (FLevels - 1);
+   dColor1.Green := (Color1.Green - FCenterColor.Green) / (FLevels - 1);
+   dColor1.Blue := (Color1.Blue - FCenterColor.Blue) / (FLevels - 1);
+
+   dColor2.Red := (Color2.Red - FCenterColor.Red) / (FLevels - 1);
+   dColor2.Green := (Color2.Green - FCenterColor.Green) / (FLevels - 1);
+   dColor2.Blue := (Color2.Blue - FCenterColor.Blue) / (FLevels - 1);
+
+   Pos1 := DefCenter;
+   Pos2 := DefCenter;
+   Color1 := FCenterColor;
+   Color2 := FCenterColor;
+
+   for Level := 0 to FLevels - 1 do
+    begin
+     if Level > 0 then
+      begin
+       dPos.X := (Pos2.X - Pos1.X) / Level;
+       dPos.Y := (Pos2.Y - Pos1.Y) / Level;
+       dColor.Red := (Color2.Red - Color1.Red) / Level;
+       dColor.Green := (Color2.Green - Color1.Green) / Level;
+       dColor.Blue := (Color2.Blue - Color1.Blue) / Level;
+       CurrentPos := Pos1;
+       CurrentColor := Color1;
+       for J := 0 to Level - 1 do
+        begin
+         FColorCombs[CurrentIndex].Position.X := Round(CurrentPos.X);
+         FColorCombs[CurrentIndex].Position.Y := Round(CurrentPos.Y);
+         FColorCombs[CurrentIndex].Color := RGBFromFloat(CurrentColor);
+         Inc(CurrentIndex);
+
+         CurrentPos.X := CurrentPos.X + dPos.X;
+         CurrentPos.Y := CurrentPos.Y + dPos.Y;
+
+         CurrentColor.Red := CurrentColor.Red + dColor.Red;
+         CurrentColor.Green := CurrentColor.Green + dColor.Green;
+         CurrentColor.Blue := CurrentColor.Blue + dColor.Blue;
+        end;
+      end;
+     Pos1.X := Pos1.X + dPos1.X;
+     Pos1.Y := Pos1.Y + dPos1.Y;
+     Pos2.X := Pos2.X + dPos2.X;
+     Pos2.Y := Pos2.Y + dPos2.Y;
+
+     Color1.Red := Color1.Red + dColor1.Red;
+     Color1.Green := Color1.Green + dColor1.Green;
+     Color1.Blue := Color1.Blue + dColor1.Blue;
+
+     Color2.Red := Color2.Red + dColor2.Red;
+     Color2.Green := Color2.Green + dColor2.Green;
+     Color2.Blue := Color2.Blue + dColor2.Blue;
+    end;
+  end;
+
+ // second step is to build a list for the black & white area: 17 entries from
+ // pure white to pure black; the first and last are implicitly double comb size
+ SetLength(FBWCombs, 17);
+ CurrentIndex := 0;
+ FBWCombs[CurrentIndex].Color := GrayFromIntensity(255);
+ FBWCombs[CurrentIndex].Position := Point(FCombSize, FCombSize);
+ Inc(CurrentIndex);
+
+ CurrentPos.X := 3 * FCombSize;
+ CurrentPos.Y := 3 * (FCombSize div 4);
+ dPos.X := Round(FCombSize * cos(Pi / 6) / 2);
+ dPos.Y := Round(FCombSize * (1 + sin(Pi / 6)) / 2);
+ for I := 0 to 14 do
+  begin
+   FBWCombs[CurrentIndex].Color := GrayFromIntensity((16 - CurrentIndex) * 15);
+   if Odd(I) then
+    FBWCombs[CurrentIndex].Position := Point(Round(CurrentPos.X + I * dPos.X), Round(CurrentPos.Y + dPos.Y))
+   else
+    FBWCombs[CurrentIndex].Position := Point(Round(CurrentPos.X + I * dPos.X), Round(CurrentPos.Y));
+   Inc(CurrentIndex);
+  end;
+ FBWCombs[CurrentIndex].Color := claBlack;
+ FBWCombs[CurrentIndex].Position := Point(Round(CurrentPos.X + 16 * dPos.X + FCombSize), FCombSize);
+ EnumerateCombs;
+end;
+
+//-- selection -----------------------------------------------------------------
+
+// Commits a selection: combines the chosen RGB with the current alpha into
+// FCurrentColor, updates the selection marker, and fires OnChange. The alpha is
+// preserved, so picking a comb does not reset the opacity.
+procedure THexColorPicker.CommitColor(const RGBColor: TAlphaColor);
+begin
+ FCurrentColor := WithAlpha(RGBColor, FAlpha);
+ SelectColor(FCurrentColor);
+ Repaint;
+end;
+
+// Public setter: adopts the alpha from the incoming color (so SelectedColor
+// round-trips), then commits it.
+procedure THexColorPicker.SetSelectedColor(const Value: TAlphaColor);
+begin
+ FAlpha := TAlphaColorRec(Value).A;
+ CommitColor(Value);
+end;
+
+procedure THexColorPicker.SetSelectedAlpha(Value: Byte);
+begin
+ if FAlpha <> Value then
+  begin
+   FAlpha := Value;
+   CommitColor(FCurrentColor);
+   if Assigned(FOnAlphaChange) then
+    FOnAlphaChange(Self);
+  end;
+end;
+
+procedure THexColorPicker.SetOpacityVisible(Value: boolean);
+begin
+ if FOpacityVisible <> Value then
+  begin
+   FOpacityVisible := Value;
+   DrawAll;
+   CalculateCombLayout;
+   Repaint;
+  end;
+end;
+
+procedure THexColorPicker.EndSelection;
+begin
+ if FCustomIndex < 0 then
+  CommitColor(FBWCombs[-(FCustomIndex + 1)].Color)
+ else
+  if FCustomIndex > 0 then
+   CommitColor(FColorCombs[FCustomIndex - 1].Color)
+  else
+   CommitColor(claNull);
+end;
+
+function THexColorPicker.GetColorUnderCursor: TAlphaColor;
+begin
+ Result := FUnderCursor;
+end;
+
+function THexColorPicker.GetColorAtPoint(X, Y: integer): TAlphaColor;
+var
+ Index: Integer;
+ Colors: TCombArray;
+begin
+ Colors := nil;
+ Index := -1;
+ if PtInRect(FBWCombRect, Point(X, Y)) then
+  begin
+   Index := FindBWArea(X, Y);
+   Colors := FBWCombs;
+  end
+ else
+  if PtInRect(FColorCombRect, Point(X, Y)) then
+    begin
+     Index := FindColorArea(X, Y);
+     Colors := FColorCombs;
+    end;
+ if (Index > -1) and (Colors <> nil) then
+  Result := Colors[Index].Color
+ else
+  Result := claNull;
+end;
+
+function THexColorPicker.GetHexColorUnderCursor: string;
+begin
+ Result := ColorToHex(GetColorUnderCursor);
+end;
+
+function THexColorPicker.GetHexColorAtPoint(X, Y: integer): string;
+begin
+ Result := ColorToHex(GetColorAtPoint(X, Y));
+end;
+
+function THexColorPicker.HexRGB: string;
+begin
+ Result := '#' + ColorToHex(FCurrentColor);
+end;
+
+function THexColorPicker.HexRGBA: string;
+begin
+ Result := '#' + ColorToHex(FCurrentColor) + IntToHex(TAlphaColorRec(FCurrentColor).A, 2);
+end;
+
+function THexColorPicker.HexARGB: string;
+begin
+ Result := '$' + IntToHex(FCurrentColor, 8);
+end;
+
+procedure THexColorPicker.CopyToClipboard(const AText: string);
+var
+ Clip: IFMXClipboardService;
+begin
+ if TPlatformServices.Current.SupportsPlatformService(IFMXClipboardService, Clip) then
+  Clip.SetClipboard(AText);
+end;
+
+procedure THexColorPicker.CopyHexToClipboard;
+begin
+ CopyToClipboard(HexRGB);
+end;
+
+procedure THexColorPicker.CopyMenuClick(Sender: TObject);
+begin
+ case (Sender as TFmxObject).Tag of
+  0: CopyToClipboard(HexRGB);
+  1: CopyToClipboard(HexRGBA);
+  2: CopyToClipboard(HexARGB);
+ end;
+end;
+
+procedure THexColorPicker.EnumerateCombs;
+var
+ i, k: integer;
+begin
+ k := 0;
+ if FBWCombs <> nil then
+  for i := 1 to High(FBWCombs) do
+   begin
+    case i of
+     1: k := -1;
+     2: k := -9;
+     3: k := -2;
+     4: k := -10;
+     5: k := -3;
+     6: k := -11;
+     7: k := -4;
+     8: k := -12;
+     9: k := -5;
+     10: k := -13;
+     11: k := -6;
+     12: k := -14;
+     13: k := -7;
+     14: k := -15;
+     15: k := -8;
+     16: K := 64;
+    end;
+    FBWCombs[i].TabIndex := k;
+   end;
+ if FColorCombs <> nil then
+  for i := 0 to High(FColorCombs) do
+   begin
+    case i of
+     0: k := 64;
+     1: k := 65;
+     2: k := 66;
+     3: k := 78;
+     4: k := 67;
+     5: k := 79;
+     6: k := 90;
+     7: k := 68;
+     8: k := 80;
+     9: k := 91;
+     10: k := 101;
+     11: k := 69;
+     12: k := 81;
+     13: k := 92;
+     14: k := 102;
+     15: k := 111;
+     16: k := 70;
+     17: k := 82;
+     18: k := 93;
+     19: k := 103;
+     20: k := 112;
+     21: k := 120;
+     22: k := 77;
+     23: k := 89;
+     24: k := 88;
+     25: k := 100;
+     26: k := 99;
+     27: k := 98;
+     28: k := 110;
+     29: k := 109;
+     30: k := 108;
+     31: k := 107;
+     32: k := 119;
+     33: k := 118;
+     34: k := 117;
+     35: k := 116;
+     36: k := 115;
+     37: k := 127;
+     38: k := 126;
+     39: k := 125;
+     40: k := 124;
+     41: k := 123;
+     42: k := 122;
+     43: k := 76;
+     44: k := 87;
+     45: k := 75;
+     46: k := 97;
+     47: k := 86;
+     48: k := 74;
+     49: k := 106;
+     50: k := 96;
+     51: k := 85;
+     52: k := 73;
+     53: k := 114;
+     54: k := 105;
+     55: k := 95;
+     56: k := 84;
+     57: k := 72;
+     58: k := 121;
+     59: k := 113;
+     60: k := 104;
+     61: k := 94;
+     62: k := 83;
+     63: k := 71;
+     64: k := 63;
+     65: k := 62;
+     66: k := 50;
+     67: k := 61;
+     68: k := 49;
+     69: k := 38;
+     70: k := 60;
+     71: k := 48;
+     72: k := 37;
+     73: k := 27;
+     74: k := 59;
+     75: k := 47;
+     76: k := 36;
+     77: k := 26;
+     78: k := 17;
+     79: k := 58;
+     80: k := 46;
+     81: k := 35;
+     82: k := 25;
+     83: k := 16;
+     84: k := 8;
+     85: k := 51;
+     86: k := 39;
+     87: k := 40;
+     88: k := 28;
+     89: k := 29;
+     90: k := 30;
+     91: k := 18;
+     92: k := 19;
+     93: k := 20;
+     94: k := 21;
+     95: k := 9;
+     96: k := 10;
+     97: k := 11;
+     98: k := 12;
+     99: k := 13;
+     100: k := 1;
+     101: k := 2;
+     102: k := 3;
+     103: k := 4;
+     104: k := 5;
+     105: k := 6;
+     106: k := 52;
+     107: k := 41;
+     108: k := 53;
+     109: k := 31;
+     110: k := 42;
+     111: k := 54;
+     112: k := 22;
+     113: k := 32;
+     114: k := 43;
+     115: k := 55;
+     116: k := 14;
+     117: k := 23;
+     118: k := 33;
+     119: k := 44;
+     120: k := 56;
+     121: k := 7;
+     122: k := 15;
+     123: k := 24;
+     124: k := 34;
+     125: k := 45;
+     126: k := 57;
+    end;
+    FColorCombs[i].TabIndex := k;
+   end;
+end;
+
+procedure THexColorPicker.SelectCombIndex(i: integer);
+var
+ j: integer;
+begin
+ if i > 0 then
+  begin
+   if FColorCombs <> nil then
+    for j := 0 to High(FColorCombs) do
+     if FColorCombs[j].TabIndex = i then
+      begin
+       SetSelectedColor(FColorCombs[j].Color);
+       Break;
+      end;
+  end
+ else
+  if FBWCombs <> nil then
+   for j := 1 to High(FBWCombs) - 1 do
+    if FBWCombs[j].TabIndex = i then
+     begin
+      SetSelectedColor(FBWCombs[j].Color);
+      Break;
+     end;
+end;
+
+function THexColorPicker.GetSelectedCombIndex: integer;
+begin
+ if FSelectedCombIndex < 0 then
+  Result := FBWCombs[-FSelectedCombIndex].TabIndex
+ else
+  Result := FColorCombs[FSelectedCombIndex].TabIndex;
+end;
+
+function THexColorPicker.GetNextCombIndex(i: integer): integer;
+begin
+ if i = 127 then
+  Result := -1
+ else
+  if i = -15 then
+   Result := 1
+  else
+   if i > 0 then
+    Result := i + 1
+   else
+    Result := i - 1;
+end;
+
+function THexColorPicker.GetPreviousCombIndex(i: integer): integer;
+begin
+ if i = 1 then
+  Result := -15
+ else
+  if i = -1 then
+   Result := 127
+   else
+    if i > 0 then
+     Result := i - 1
+    else
+     Result := i + 1;
+end;
+
+//-- intensity & geometry setters ----------------------------------------------
+
+function THexColorPicker.GetIntensity: integer;
+begin
+ Result := ROUND(FCenterIntensity * 100);
+end;
+
+procedure THexColorPicker.SetIntensity(v: integer);
+var
+ s: single;
+begin
+ s := v / 100;
+ FCenterIntensity := s;
+ if FCenterIntensity < 0 then FCenterIntensity := 0;
+ if FCenterIntensity > 1 then FCenterIntensity := 1;
+ FCenterColor.Red := DefCenterColor.Red * FCenterIntensity;
+ FCenterColor.Green := DefCenterColor.Green * FCenterIntensity;
+ FCenterColor.Blue := DefCenterColor.Blue * FCenterIntensity;
+ FColorCombs := nil;
+ CalculateCombLayout;
+ EndSelection;
+ Repaint;
+ if Assigned(FOnIntensityChange) then
+  FOnIntensityChange(Self);
+end;
+
+procedure THexColorPicker.ChangeIntensity(increase: boolean);
+var
+ i: integer;
+begin
+ i := ROUND(FCenterIntensity * 100);
+ if increase then
+  begin
+   Inc(i, FIncrement);
+   if i > 100 then i := 100;
+  end
+ else
+  begin
+   Dec(i, FIncrement);
+   if i < 0 then i := 0;
+  end;
+ SetIntensity(i);
+end;
+
+procedure THexColorPicker.SetRadius(r: integer);
+begin
+ FRadius := r;
+ DrawAll;
+ CalculateCombLayout;
+ Repaint;
+end;
+
+procedure THexColorPicker.SetSliderWidth(w: integer);
+begin
+ if (FSliderWidth <> w) and FSliderVisible then
+  begin
+   FSliderWidth := w;
+   DrawAll;
+   Width := FSliderRect.Right + 2;
+   CalculateCombLayout;
+   Repaint;
+  end;
+end;
+
+procedure THexColorPicker.SetBackgroundColor(const Value: TAlphaColor);
+begin
+ if FBackgroundColor <> Value then
+  begin
+   FBackgroundColor := Value;
+   Repaint;
+  end;
+end;
+
+procedure THexColorPicker.Resize;
+var
+ rw, rh: integer;
+begin
+ inherited;
+ if not FInitialized then
+  Exit;
+ if (Width >= 93) and (Height >= 85) then
+  begin
+   if FSliderVisible then
+    rw := Round((Width - 10 - FSliderWidth) / 2)
+   else
+    rw := Round(Width / 2 - 5);
+   // reserve vertical space for the opacity bar so it doesn't overlap the combs
+   if FOpacityVisible then
+    rh := Round((24 / 53) * (Height - 6 - OpacityStrip))
+   else
+    rh := Round((24 / 53) * (Height - 6));
+   SetRadius(Min(rw, rh));
+  end;
+end;
+
+function THexColorPicker.SelectAvailableColor(Color: TAlphaColor): boolean;
+var
+ I: integer;
+ found: Boolean;
+begin
+ found := False;
+ Result := false;
+ if FColorCombs = nil then CalculateCombLayout;
+ FCustomIndex := 0;
+ FSelectedIndex := NoCell;
+ for I := 0 to High(FBWCombs) do
+  if SameRGB(FBWCombs[I].Color, Color) then
+   begin
+    FSelectedIndex := CustomCell;
+    FCustomIndex := -(I + 1);
+    found := True;
+    Result := true;
+    Break;
+   end;
+ if not found then
+  for I := 0 to High(FColorCombs) do
+   if SameRGB(FColorCombs[I].Color, Color) then
+    begin
+     FSelectedIndex := CustomCell;
+     FCustomIndex := I + 1;
+     Result := true;
+     Break;
+    end;
+end;
+
+procedure THexColorPicker.SelectColor(Color: TAlphaColor);
+begin
+ SelectAvailableColor(Color);
+ Repaint;
+ if Assigned(FOnChange) then
+  FOnChange(Self);
+end;
+
+procedure THexColorPicker.SetSliderVisible(Value: boolean);
+begin
+ if FSliderVisible <> Value then
+  begin
+   FSliderVisible := Value;
+   DrawAll;
+   CalculateCombLayout;
+   Repaint;
+  end;
+end;
+
+procedure THexColorPicker.SetMarker(Value: TMarker);
+begin
+ if FMarker <> Value then
+  begin
+   FMarker := Value;
+   DrawAll;
+   CalculateCombLayout;
+   Repaint;
+  end;
+end;
+
+procedure THexColorPicker.SetNewArrowStyle(Value: boolean);
+begin
+ if FNewArrowStyle <> Value then
+  begin
+   FNewArrowStyle := Value;
+   DrawAll;
+   CalculateCombLayout;
+   Repaint;
+  end;
+end;
+
+end.

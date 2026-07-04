@@ -1,0 +1,60 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{CFB400A5-4ADF-4B39-BED8-A906857CC376}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="HexColorPickerFmxRT.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="HexColorPickerFmxDT.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="..\Demo\DemoProject.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="HexColorPickerFmxRT">
+        <MSBuild Projects="HexColorPickerFmxRT.dproj"/>
+    </Target>
+    <Target Name="HexColorPickerFmxRT:Clean">
+        <MSBuild Projects="HexColorPickerFmxRT.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HexColorPickerFmxRT:Make">
+        <MSBuild Projects="HexColorPickerFmxRT.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="HexColorPickerFmxDT">
+        <MSBuild Projects="HexColorPickerFmxDT.dproj"/>
+    </Target>
+    <Target Name="HexColorPickerFmxDT:Clean">
+        <MSBuild Projects="HexColorPickerFmxDT.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HexColorPickerFmxDT:Make">
+        <MSBuild Projects="HexColorPickerFmxDT.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DemoProject">
+        <MSBuild Projects="..\Demo\DemoProject.dproj"/>
+    </Target>
+    <Target Name="DemoProject:Clean">
+        <MSBuild Projects="..\Demo\DemoProject.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DemoProject:Make">
+        <MSBuild Projects="..\Demo\DemoProject.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="HexColorPickerFmxRT;HexColorPickerFmxDT;DemoProject"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="HexColorPickerFmxRT:Clean;HexColorPickerFmxDT:Clean;DemoProject:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="HexColorPickerFmxRT:Make;HexColorPickerFmxDT:Make;DemoProject:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

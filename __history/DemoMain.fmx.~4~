@@ -1,0 +1,12 @@
+object FormDemo: TFormDemo
+  Left = 0
+  Top = 0
+  Caption = 'Hexa Color Picker (FMX) Demo'
+  ClientHeight = 658
+  ClientWidth = 520
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  DesignerMasterStyle = 0
+end

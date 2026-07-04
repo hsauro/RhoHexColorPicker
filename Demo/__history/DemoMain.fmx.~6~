@@ -1,0 +1,26 @@
+object FormDemo: TFormDemo
+  Left = 0
+  Top = 0
+  Caption = 'Hexa Color Picker (FMX) Demo'
+  ClientHeight = 658
+  ClientWidth = 520
+  Position = MainFormCenter
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  DesignerMasterStyle = 0
+  object RhoHexColorPicker1: TRhoHexColorPicker
+    Position.X = 88.000000000000000000
+    Position.Y = 320.000000000000000000
+    Size.Width = 345.000000000000000000
+    Size.Height = 306.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 2
+    ShowHint = True
+    HintFormat = 'RGB(%r, %g, %b)'#13'Hex: #%hex'#13'Right-click to copy'
+    SelectedColor = claBlack
+    BackgroundColor = claNull
+    IntensityText = 'Intensity'
+  end
+end

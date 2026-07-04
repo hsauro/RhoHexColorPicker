@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2026/06/26 12:41:39.000.817,=rtl.dcp</Transaction>
+    <Transaction>2026/06/26 12:42:01.000.652,D:\Documents\Embarcadero\Studio\Projects\Package1.dproj=D:\Documents\Embarcadero\Studio\Projects\FMX\ColorPickerHexClaude\HexColorPickerFmxDT.dproj</Transaction>
+    <Transaction>2026/06/26 12:48:28.000.999,=D:\Documents\Embarcadero\Studio\Projects\FMX\ColorPickerHexClaude\HexColorPickerFmxReg.pas</Transaction>
+    <Transaction>2026/06/26 13:11:01.000.271,=HexColorPickerFmxRT.dcp</Transaction>
+    <Transaction>2026/06/26 14:51:00.000.749,D:\Documents\Embarcadero\Studio\Projects\FMX\ColorPickers_FMX\HexColorPicker\HexColorPickerFmxReg.pas=</Transaction>
+    <Transaction>2026/06/26 14:53:29.000.692,=D:\Documents\Embarcadero\Studio\Projects\FMX\ColorPickers_FMX\HexColorPicker\Source\HexColorPickerFmxReg.pas</Transaction>
+    <Transaction>2026/07/03 20:16:50.107,D:\Documents\Embarcadero\Studio\Projects\FMX\RhodyComponents\HexColorPicker\Source\RhoHexColorPickerFmxReg.pas=D:\Documents\Embarcadero\Studio\Projects\FMX\RhodyComponents\HexColorPicker\Source\HexColorPickerFmxReg.pas</Transaction>
+  </Transactions>
+</BorlandProject>

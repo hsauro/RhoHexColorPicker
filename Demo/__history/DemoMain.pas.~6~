@@ -1,0 +1,90 @@
+unit DemoMain;
+
+// Demo for THexaColorPicker. The picker and the surrounding controls are all
+// created in code (FormCreate), so this demo runs without installing the
+// design-time package - it links HexaColorPicker.pas directly.
+
+interface
+
+uses
+  System.SysUtils, System.Types, System.UITypes, System.Classes,
+  System.UIConsts,
+  FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics,
+  FMX.Controls.Presentation, FMX.StdCtrls, FMX.Objects,
+  uRhoHexColorPickerFmx;
+
+type
+  TFormDemo = class(TForm)
+    RhoHexColorPicker1: TRhoHexColorPicker;
+    procedure FormCreate(Sender: TObject);
+  private
+    FPicker: TRHoHexColorPicker;
+    FSwatch: TRectangle;
+    FHexLabel: TLabel;
+    FOpacityLabel: TLabel;
+    FHelp: TLabel;
+    procedure PickerChanged(Sender: TObject);
+    procedure UpdateInfo;
+  end;
+
+var
+  FormDemo: TFormDemo;
+
+implementation
+
+{$R *.fmx}
+
+procedure TFormDemo.FormCreate(Sender: TObject);
+begin
+  Caption := 'Hex Color Picker (FMX) Demo';
+
+  FPicker := TRhoHexColorPicker.Create(Self);
+  FPicker.Parent := Self;
+  FPicker.Position.Point := PointF(16, 16);
+  FPicker.OnChange := PickerChanged;
+  FPicker.OnIntensityChange := PickerChanged;
+  FPicker.OnAlphaChange := PickerChanged;
+
+  FSwatch := TRectangle.Create(Self);
+  FSwatch.Parent := Self;
+  FSwatch.SetBounds(264, 16, 224, 96);
+  FSwatch.Stroke.Color := claBlack;
+
+  FHexLabel := TLabel.Create(Self);
+  FHexLabel.Parent := Self;
+  FHexLabel.SetBounds(264, 122, 224, 24);
+
+  FOpacityLabel := TLabel.Create(Self);
+  FOpacityLabel.Parent := Self;
+  FOpacityLabel.SetBounds(264, 150, 224, 24);
+
+  FHelp := TLabel.Create(Self);
+  FHelp.Parent := Self;
+  FHelp.SetBounds(264, 190, 240, 140);
+  FHelp.AutoSize := False;
+  FHelp.WordWrap := True;
+  FHelp.Text :=
+    'Click a comb to pick a color.'#13#10 +
+    'Right slider = intensity.'#13#10 +
+    'Bottom bar = opacity.'#13#10 +
+    'Mouse wheel / arrow keys also work.'#13#10 +
+    'Right-click to copy the hex value.';
+
+  FPicker.SelectedColor := claRed;
+  UpdateInfo;
+end;
+
+procedure TFormDemo.PickerChanged(Sender: TObject);
+begin
+  UpdateInfo;
+end;
+
+procedure TFormDemo.UpdateInfo;
+begin
+  FSwatch.Fill.Color := FPicker.SelectedColor;
+  FHexLabel.Text := 'Hex: ' + FPicker.HexRGB + '   ' + FPicker.HexRGBA;
+  FOpacityLabel.Text := Format('Opacity: %d  (%d%%)',
+    [FPicker.SelectedAlpha, Round(FPicker.SelectedAlpha / 255 * 100)]);
+end;
+
+end.

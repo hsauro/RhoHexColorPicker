@@ -1,0 +1,20 @@
+program ColorPIcker_Claude_Project;
+
+uses
+  System.StartUpCopy,
+  FMX.Forms,
+  ufMain in 'ufMain.pas' {frmMain},
+  HexaColorPicker in 'HexaColorPicker.pas',
+  RGBCIEUtils in 'RGBCIEUtils.pas',
+  RGBCMYKUtils in 'RGBCMYKUtils.pas',
+  RGBHSLUtils in 'RGBHSLUtils.pas',
+  RGBHSVUtils in 'RGBHSVUtils.pas',
+  Scanlines in 'Scanlines.pas';
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.CreateForm(TfrmMain, frmMain);
+  Application.Run;
+end.

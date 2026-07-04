@@ -1,0 +1,68 @@
+unit ufMain;
+
+interface
+
+uses
+  System.SysUtils, System.Types, System.UITypes,
+  System.UIConsts,
+  System.Classes,
+  System.Variants,
+  FMX.Types,
+  FMX.Controls,
+  FMX.StdCtrls,
+  FMX.Forms, FMX.Graphics,
+  FMX.Controls.Presentation,
+  FMX.Objects,
+  FMX.Dialogs, HexaColorPicker;
+
+type
+  TfrmMain = class(TForm)
+    procedure FormCreate(Sender: TObject);
+  private
+    { Private declarations }
+    FPicker: THexaColorPicker;
+    FSwatch: TRectangle;   // shows the currently selected color
+    FLabel: TLabel;
+    procedure PickerChange(Sender: TObject);
+  public
+    { Public declarations }
+  end;
+
+var
+  frmMain: TfrmMain;
+
+implementation
+
+{$R *.fmx}
+
+procedure TfrmMain.FormCreate(Sender: TObject);
+begin
+  // The control creates itself with a default size of 204 x 206.
+  FPicker := THexaColorPicker.Create(Self);
+  FPicker.Parent := Self;                 // <-- required; without a Parent it won't show
+  FPicker.Position.Point := PointF(16, 16);
+  FPicker.Width := 300;
+  FPicker.Height := 300;
+  FPicker.SelectedColor := claRed;        // any TAlphaColor
+  FPicker.OnChange := PickerChange;
+
+  // A swatch + label to display the result
+  FSwatch := TRectangle.Create(Self);
+  FSwatch.Parent := Self;
+  FSwatch.SetBounds(280, 16, 120, 60);
+  FSwatch.Fill.Color := FPicker.SelectedColor;
+
+  FLabel := TLabel.Create(Self);
+  FLabel.Parent := Self;
+  FLabel.SetBounds(280, 84, 160, 24);
+  FLabel.Text := '#' + FPicker.GetHexColorAtPoint(0, 0); // placeholder
+end;
+
+procedure TfrmMain.PickerChange(Sender: TObject);
+begin
+  FSwatch.Fill.Color := FPicker.SelectedColor;
+  // SelectedColor is a TAlphaColor; format it as RRGGBB
+  FLabel.Text := Format('#%.6x', [FPicker.SelectedColor and $00FFFFFF]);
+end;
+
+end.
