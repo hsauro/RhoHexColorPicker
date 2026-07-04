@@ -27,6 +27,10 @@ a FireMonkey port of the classic VCL `TRhoHexaColorPicker` from mbColorLib.
 - Windows (Win32 + Win64). The drawing is standard FMX `TCanvas`, so other FMX
   platforms are likely workable but untested.
 
+## Screenshot
+
+<img src="Images/ScreenShot.png" alt="Alt Text" width="500">
+
 ## Installation (design-time component)
 
 The component ships as a runtime + design-time package pair.
