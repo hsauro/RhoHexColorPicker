@@ -41,7 +41,7 @@ The component ships as a runtime + design-time package pair.
 3. Build `RhoHexColorPickerFmxDT` (the design package, Win32).
 4. Right-click `RhoHexColorPickerFmxDT` ▸ **Install**.
 
-`THexColorPicker` appears on the Tool Palette under **Rhody Components**.
+`TRhoHexColorPicker` appears on the Tool Palette under **Rhody Components**.
 
 To use it in your applications, add the `Source` folder to **Tools ▸ Options ▸
 Language ▸ Delphi ▸ Library ▸ Library path** (per platform), or add
