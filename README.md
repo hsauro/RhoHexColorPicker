@@ -31,19 +31,19 @@ a FireMonkey port of the classic VCL `TRhoHexaColorPicker` from mbColorLib.
 
 The component ships as a runtime + design-time package pair.
 
-1. Open `Package/HexColorPickerFmx.groupproj`.
-2. With platform **Win32** selected, **Build** `HexColorPickerFmxRT` (the runtime
+1. Open `Package/RhoHexColorPickerFmx.groupproj`.
+2. With platform **Win32** selected, **Build** `RhoHexColorPickerFmxRT` (the runtime
    package), then build it again for **Win64** if you target 64-bit apps.
-3. Build `HexColorPickerFmxDT` (the design package, Win32).
-4. Right-click `HexColorPickerFmxDT` ▸ **Install**.
+3. Build `RhoHexColorPickerFmxDT` (the design package, Win32).
+4. Right-click `RhoHexColorPickerFmxDT` ▸ **Install**.
 
-`THexColorPicker` appears on the Tool Palette under **mbColor Lib**.
+`THexColorPicker` appears on the Tool Palette under **Rhody Components**.
 
 To use it in your applications, add the `Source` folder to **Tools ▸ Options ▸
 Language ▸ Delphi ▸ Library ▸ Library path** (per platform), or add
-`Source/HexColorPickerFmx.pas` to your project directly.
+`Source/RhoHexColorPickerFmx.pas` to your project directly.
 
-### Notes / gotchas
+### Notes
 
 - The IDE is 32-bit, so the **design package and a Win32 build of the runtime
   package are required to install**; build the runtime for Win64 as well so 64-bit
@@ -52,33 +52,33 @@ Language ▸ Delphi ▸ Library ▸ Library path** (per platform), or add
   runtime package and reinstall the design package (the platform support comes from
   `[ComponentPlatformsAttribute]` on the class, read from the Win32 runtime BPL).
 - **Coexistence with the original VCL mbColorLib:** this control was deliberately
-  named `THexColorPicker` / unit `HexColorPickerFmx` (dropping the "a") so it does
+  named `TRhoHexColorPicker` / unit `uRhoHexColorPickerFmx` (dropping the "a") so it does
   **not** collide with the VCL `THexaColorPicker` / `HexaColorPicker` unit in
   `mbColorLibDXE8`. Both can be installed at the same time.
 
 ## Quick start
 
 ### Design time
-Drop a `THexColorPicker` on an FMX form and handle `OnChange`:
+Drop a `TRhoHexColorPicker` on an FMX form and handle `OnChange`:
 
 ```pascal
-procedure TForm1.HexColorPicker1Change(Sender: TObject);
+procedure TForm1.RhoHexColorPicker1Change(Sender: TObject);
 begin
-  Rectangle1.Fill.Color := HexColorPicker1.SelectedColor;
-  Caption := HexColorPicker1.HexRGB;     // e.g. '#3C8DC0'
+  Rectangle1.Fill.Color := RhoHexColorPicker1.SelectedColor;
+  Caption := RhoHexColorPicker1.HexRGB;     // e.g. '#3C8DC0'
 end;
 ```
 
 ### In code (no install required)
-Add `HexColorPickerFmx` to `uses` and create it at runtime:
+Add `RhoHexColorPickerFmx` to `uses` and create it at runtime:
 
 ```pascal
-uses HexColorPickerFmx;
+uses uHexColorPickerFmx;
 
 var
-  Picker: THexColorPicker;
+  Picker: TRhoHexColorPicker;
 begin
-  Picker := THexColorPicker.Create(Self);
+  Picker := TRhoHexColorPicker.Create(Self);
   Picker.Parent := Self;                 // required, or it won't show
   Picker.Position.Point := PointF(16, 16);
   Picker.SelectedColor := TAlphaColors.Red;
@@ -129,12 +129,12 @@ without installing the package.
 
 ```
 Source/
-  RhoHexColorPickerFmx.pas        the control (THexColorPicker)
-  RhoHexColorPickerFmxReg.pas     design-time Register (palette: "mbColor Lib")
+  RhoHexColorPickerFmx.pas        the control (TRhoHexColorPicker)
+  RhoHexColorPickerFmxReg.pas     design-time Register (palette: "Rhody Components")
 Package/
-  HexColorPickerFmxRT.dpk      runtime package
-  HexColorPickerFmxDT.dpk      design-time package (install this)
-  HexColorPickerFmx.groupproj  project group (build RT -> DT)
+  RhoHexColorPickerFmxRT.dpk      runtime package
+  RhoHexColorPickerFmxDT.dpk      design-time package (install this)
+  RhoHexColorPickerFmx.groupproj  project group (build RT -> DT)
 Demo/
   DemoProject.dproj            in-code demo project
   DemoMain.pas / .fmx          in-code demo form
