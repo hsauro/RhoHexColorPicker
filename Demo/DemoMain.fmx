@@ -11,12 +11,12 @@ object FormDemo: TFormDemo
   OnCreate = FormCreate
   DesignerMasterStyle = 0
   object RhoHexColorPicker1: TRhoHexColorPicker
-    Position.X = 88.000000000000000000
-    Position.Y = 320.000000000000000000
-    Size.Width = 273.000000000000000000
-    Size.Height = 306.000000000000000000
+    Position.X = 96.000000000000000000
+    Position.Y = 321.000000000000000000
+    Size.Width = 289.000000000000000000
+    Size.Height = 329.000000000000000000
     Size.PlatformDefault = False
-    TabOrder = 2
+    TabOrder = 1
     ShowHint = True
     HintFormat = 'RGB(%r, %g, %b)'#13'Hex: #%hex'#13'Right-click to copy'
     SelectedColor = claBlack

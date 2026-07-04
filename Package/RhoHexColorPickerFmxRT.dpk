@@ -1,4 +1,4 @@
-package HexColorPickerFmxDT;
+package RhoHexColorPickerFmxRT;
 
 {$R *.res}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
@@ -26,14 +26,14 @@ package HexColorPickerFmxDT;
 {$DEFINE RELEASE}
 {$ENDIF IMPLICITBUILDING}
 {$LIBSUFFIX AUTO}
-{$DESIGNONLY}
+{$RUNONLY}
 {$IMPLICITBUILD OFF}
 
 requires
   rtl,
-  HexColorPickerFmxRT;
+  fmx;
 
 contains
-  RhoHexColorPickerFmxReg in '..\Source\RhoHexColorPickerFmxReg.pas';
+  uRhoHexColorPickerFmx in '..\Source\uRhoHexColorPickerFmx.pas';
 
 end.

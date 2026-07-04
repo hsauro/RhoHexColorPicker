@@ -3,10 +3,10 @@
         <ProjectGuid>{CFB400A5-4ADF-4B39-BED8-A906857CC376}</ProjectGuid>
     </PropertyGroup>
     <ItemGroup>
-        <Projects Include="HexColorPickerFmxRT.dproj">
+        <Projects Include="RhoHexColorPickerFmxRT.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="HexColorPickerFmxDT.dproj">
+        <Projects Include="RhoHexColorPickerFmxDT.dproj">
             <Dependencies/>
         </Projects>
         <Projects Include="..\Demo\DemoProject.dproj">
@@ -20,23 +20,23 @@
             <Default.Personality/>
         </BorlandProject>
     </ProjectExtensions>
-    <Target Name="HexColorPickerFmxRT">
-        <MSBuild Projects="HexColorPickerFmxRT.dproj"/>
+    <Target Name="RhoHexColorPickerFmxRT">
+        <MSBuild Projects="RhoHexColorPickerFmxRT.dproj"/>
     </Target>
-    <Target Name="HexColorPickerFmxRT:Clean">
-        <MSBuild Projects="HexColorPickerFmxRT.dproj" Targets="Clean"/>
+    <Target Name="RhoHexColorPickerFmxRT:Clean">
+        <MSBuild Projects="RhoHexColorPickerFmxRT.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="HexColorPickerFmxRT:Make">
-        <MSBuild Projects="HexColorPickerFmxRT.dproj" Targets="Make"/>
+    <Target Name="RhoHexColorPickerFmxRT:Make">
+        <MSBuild Projects="RhoHexColorPickerFmxRT.dproj" Targets="Make"/>
     </Target>
-    <Target Name="HexColorPickerFmxDT">
-        <MSBuild Projects="HexColorPickerFmxDT.dproj"/>
+    <Target Name="RhoHexColorPickerFmxDT">
+        <MSBuild Projects="RhoHexColorPickerFmxDT.dproj"/>
     </Target>
-    <Target Name="HexColorPickerFmxDT:Clean">
-        <MSBuild Projects="HexColorPickerFmxDT.dproj" Targets="Clean"/>
+    <Target Name="RhoHexColorPickerFmxDT:Clean">
+        <MSBuild Projects="RhoHexColorPickerFmxDT.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="HexColorPickerFmxDT:Make">
-        <MSBuild Projects="HexColorPickerFmxDT.dproj" Targets="Make"/>
+    <Target Name="RhoHexColorPickerFmxDT:Make">
+        <MSBuild Projects="RhoHexColorPickerFmxDT.dproj" Targets="Make"/>
     </Target>
     <Target Name="DemoProject">
         <MSBuild Projects="..\Demo\DemoProject.dproj"/>
@@ -48,13 +48,13 @@
         <MSBuild Projects="..\Demo\DemoProject.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="HexColorPickerFmxRT;HexColorPickerFmxDT;DemoProject"/>
+        <CallTarget Targets="RhoHexColorPickerFmxRT;RhoHexColorPickerFmxDT;DemoProject"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="HexColorPickerFmxRT:Clean;HexColorPickerFmxDT:Clean;DemoProject:Clean"/>
+        <CallTarget Targets="RhoHexColorPickerFmxRT:Clean;RhoHexColorPickerFmxDT:Clean;DemoProject:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="HexColorPickerFmxRT:Make;HexColorPickerFmxDT:Make;DemoProject:Make"/>
+        <CallTarget Targets="RhoHexColorPickerFmxRT:Make;RhoHexColorPickerFmxDT:Make;DemoProject:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
