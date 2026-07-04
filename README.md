@@ -1,4 +1,4 @@
-# THexColorPicker (FMX)
+# TRhoHexColorPicker (FMX)
 
 A honeycomb / hexagonal **color picker control for FireMonkey (FMX)**, with an
 intensity slider, an opacity (alpha) bar, and a right-click "copy hex" menu. It is
